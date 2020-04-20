@@ -1,13 +1,25 @@
 "use strict";
 
 const MongoClient = require('mongodb').MongoClient;
-const MONGODB_URI = "mongodb+srv://" + process.env.MONGODB_USER + ":" + process.env.MONGODB_PASSW + "@" +
-    process.env.MONGODB_URI + "/vopak?retryWrites=true&w=majority"
+const MONGODB_URI = "mongodb+srv://" +
+    process.env.MONGODB_USER +
+    ":" +
+    process.env.MONGODB_PASSW +
+    "@" +
+    process.env.MONGODB_URI +
+    "/vopak?retryWrites=true&w=majority"
 const moment = require('moment');
 
 let cachedDb;
 let response;
 
+/**
+ * Connect to Mongo.
+ *
+ * @param uri
+ *
+ * @returns {Promise<unknown>|Promise<MongoClient>}
+ */
 function connectToDatabase (uri) {
   console.log('=> connect to database');
 
@@ -23,9 +35,15 @@ function connectToDatabase (uri) {
     });
 }
 
+/**
+ * Retrieve most recent item from the "weather" collection, filtered by q.
+ *
+ * @param client
+ * @param q
+ *
+ * @returns {Promise<T>}
+ */
 function getMostRecentWeatherItem(client, q) {
-  console.log('=> getMostRecentWeatherItem');
-
   return client.db().collection('weather')
         .find(q, {
             "limit": 1,
@@ -39,6 +57,13 @@ function getMostRecentWeatherItem(client, q) {
     });
 }
 
+/**
+ * Lambda handler.
+ *
+ * @param event
+ * @param context
+ * @param callback
+ */
 exports.lambdaHandler = (event, context, callback) => {
     context.callbackWaitsForEmptyEventLoop = false;
 
