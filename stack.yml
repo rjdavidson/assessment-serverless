@@ -1,0 +1,211 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "My API Gateway and Lambda function"
+
+Parameters:
+  apiGatewayStageName:
+    Type: "String"
+    AllowedPattern: "^[a-z0-9]+$"
+    Default: "v0"
+
+  CodeCommitHash:
+    Type: "String"
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: "a0788f0d6aa7fff7efa84247ca091eab8c16f292"
+
+  avgTempFunctionName:
+    Type: "String"
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: "avg-temp"
+
+  currentTempFunctionName:
+    Type: "String"
+    AllowedPattern: "^[a-zA-Z0-9]+[a-zA-Z0-9-]+[a-zA-Z0-9]+$"
+    Default: "current-temp"
+
+  LambdaCodeS3Bucket:
+    Type: "String"
+    Default: "assessment-vopak"
+
+  MongoDBUri:
+    Type: "String"
+    Default: "vopak-0-1ab9r.mongodb.net"
+
+  MongoDBUsername:
+    Type: "String"
+    Default: "vopak"
+
+  MongoDBPassword:
+    Type: "String"
+    NoEcho: true
+    Default: ""
+
+Resources:
+  RestApiGateway:
+    Type: "AWS::ApiGateway::RestApi"
+    Properties:
+      Name: "Assessment API Gateway"
+      Description: "My API"
+
+  CurrentTempResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      RestApiId: !Ref RestApiGateway
+      ParentId: !GetAtt
+        - "RestApiGateway"
+        - "RootResourceId"
+      PathPart: "currenttempincovilha"
+
+  AvgTempResource:
+    Type: "AWS::ApiGateway::Resource"
+    Properties:
+      RestApiId: !Ref RestApiGateway
+      ParentId: !GetAtt
+        - "RestApiGateway"
+        - "RootResourceId"
+      PathPart: "avgtempinsfax"
+
+  CurrentTempMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref RestApiGateway
+      ResourceId: !Ref CurrentTempResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: GET
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${currentTempLambdaFn.Arn}/invocations
+
+  AvgTempMethod:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      RestApiId: !Ref RestApiGateway
+      ResourceId: !Ref AvgTempResource
+      HttpMethod: GET
+      AuthorizationType: NONE
+      Integration:
+        Type: AWS_PROXY
+        IntegrationHttpMethod: GET
+        Uri: !Sub >-
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${avgTempLambdaFn.Arn}/invocations
+
+#  apiGatewayDeployment:
+#    Type: "AWS::ApiGateway::Deployment"
+#    DependsOn:
+#      - "apiGatewayRootMethod"
+#    Properties:
+#      RestApiId: !Ref "RestApiGateway"
+#      StageName: !Ref "apiGatewayStageName"
+
+  avgTempLambdaFn:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: "My function"
+      FunctionName: !Ref avgTempFunctionName
+      Handler: "app.lambdaHandler"
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key:
+          !Join
+          - ''
+          - - 'code/avg-temp/'
+            - !Ref CodeCommitHash
+            - '.zip'
+      Environment:
+        Variables:
+          MONGODB_URI: !Ref MongoDBUri
+          MONGODB_USER: !Ref MongoDBUsername
+          MONGODB_PASSW: !Ref MongoDBPassword
+      Role: !GetAtt "lambdaIAMRole.Arn"
+      Runtime: "nodejs12.x"
+      Timeout: 10
+
+  currentTempLambdaFn:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Description: "My function"
+      FunctionName: !Ref currentTempFunctionName
+      Handler: "app.lambdaHandler"
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref LambdaCodeS3Bucket
+        S3Key:
+          !Join
+          - ''
+          - - 'code/current-temp/'
+            - !Ref CodeCommitHash
+            - '.zip'
+      Environment:
+        Variables:
+          MONGODB_URI: !Ref MongoDBUri
+          MONGODB_USER: !Ref MongoDBUsername
+          MONGODB_PASSW: !Ref MongoDBPassword
+      Role: !GetAtt "lambdaIAMRole.Arn"
+      Runtime: "nodejs12.x"
+      Timeout: 10
+
+  currentTempApiGatewayInvoke:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "currentTempLambdaFn.Arn"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}"
+
+  avgTempApiGatewayInvoke:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "avgTempLambdaFn.Arn"
+      Principal: "apigateway.amazonaws.com"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}"
+
+  lambdaIAMRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Effect: "Allow"
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${avgTempFunctionName}:*"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${currentTempFunctionName}:*"
+          PolicyName: "lambda"
+
+  avgTempFnLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${avgTempFunctionName}"
+      RetentionInDays: 90
+
+  currentTempFnLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${currentTempFunctionName}"
+      RetentionInDays: 90
+
+Outputs:
+  apiGatewayInvokeURL:
+    Value: !Sub "https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${apiGatewayStageName}"
+
+  avgTempLambdaArn:
+    Value: !GetAtt "avgTempLambdaFn.Arn"
+
+  currentTempLambdaArn:
+    Value: !GetAtt "currentTempLambdaFn.Arn"
