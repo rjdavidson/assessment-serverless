@@ -1,7 +1,7 @@
 {
   "name": "avg-temp",
   "version": "1.0.0",
-  "description": "Current temperature lambda",
+  "description": "Average temperature lambda",
   "main": "app.js",
   "repository": "",
   "author": "Richard Davidson",

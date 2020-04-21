@@ -51,9 +51,12 @@ function getMostRecentWeatherItem(client, q) {
                 ['ts', 'desc']
             ]
         })
+        .project({ temperature: 1, _id: 0 })
         .toArray()
     .then(result => {
-        return result
+        return result[0]
+    }).catch(err => {
+        return false
     });
 }
 
@@ -67,17 +70,29 @@ function getMostRecentWeatherItem(client, q) {
 exports.lambdaHandler = (event, context, callback) => {
     context.callbackWaitsForEmptyEventLoop = false;
 
+    const q = {'city': 'Covilha', 'country': 'Portugal'}
     connectToDatabase(MONGODB_URI)
-    .then(db => getMostRecentWeatherItem(db, {'city': 'Covilha'}))
+    .then(db => getMostRecentWeatherItem(db, q))
     .then(result => {
+        if (! result) {
+            response = {
+                statusCode: 404,
+                body: JSON.stringify(({
+                    message: 'Could not find weather items',
+                    q: q,
+                    current_dt: moment().format(),
+                }))
+            }
+            return callback(null, response)
+        }
         response = {
             statusCode: 200,
             body: JSON.stringify({
-                temperature: result[0].temperature,
+                temperature: result.temperature,
                 current_dt: moment().format(),
             }),
         };
-      callback(null, response);
+        callback(null, response);
     })
     .catch(err => {
       console.log('=> an error occurred: ', err);

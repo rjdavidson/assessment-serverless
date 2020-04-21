@@ -39,6 +39,23 @@ Resources:
           Properties:
             Path: /currenttempincovilha
             Method: get
+  AverageTempFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: avg-temp/
+      Handler: app.lambdaHandler
+      Runtime: nodejs12.x
+      Environment:
+        Variables:
+          MONGODB_URI: !Ref MONGODB_URI
+          MONGODB_USER: !Ref MONGODB_USER
+          MONGODB_PASSW: !Ref MONGODB_PASSW
+      Events:
+        CurrentTemperature:
+          Type: Api
+          Properties:
+            Path: /avgtempinsfax
+            Method: get
 Outputs:
   HelloWorldApi:
     Description: "API Gateway endpoint URL for Prod stage for Hello World function"
