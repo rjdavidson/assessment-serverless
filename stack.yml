@@ -73,7 +73,7 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         Uri: !Sub >-
           arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${currentTempLambdaFn.Arn}/invocations
 
@@ -86,19 +86,20 @@ Resources:
       AuthorizationType: NONE
       Integration:
         Type: AWS_PROXY
-        IntegrationHttpMethod: GET
+        IntegrationHttpMethod: POST
         Uri: !Sub >-
-          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${avgTempLambdaFn.Arn}/invocations
+          arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${AvgTempLambdaFn.Arn}/invocations
 
-#  apiGatewayDeployment:
-#    Type: "AWS::ApiGateway::Deployment"
-#    DependsOn:
-#      - "apiGatewayRootMethod"
-#    Properties:
-#      RestApiId: !Ref "RestApiGateway"
-#      StageName: !Ref "apiGatewayStageName"
+  ApiGatewayDeployment:
+    Type: "AWS::ApiGateway::Deployment"
+    DependsOn:
+      - "CurrentTempMethod"
+      - "AvgTempMethod"
+    Properties:
+      RestApiId: !Ref "RestApiGateway"
+      StageName: !Ref "apiGatewayStageName"
 
-  avgTempLambdaFn:
+  AvgTempLambdaFn:
     Type: "AWS::Lambda::Function"
     Properties:
       Description: "My function"
@@ -152,15 +153,15 @@ Resources:
       Action: "lambda:InvokeFunction"
       FunctionName: !GetAtt "currentTempLambdaFn.Arn"
       Principal: "apigateway.amazonaws.com"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}/*"
 
   avgTempApiGatewayInvoke:
     Type: "AWS::Lambda::Permission"
     Properties:
       Action: "lambda:InvokeFunction"
-      FunctionName: !GetAtt "avgTempLambdaFn.Arn"
+      FunctionName: !GetAtt "AvgTempLambdaFn.Arn"
       Principal: "apigateway.amazonaws.com"
-      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}"
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RestApiGateway}/*"
 
   lambdaIAMRole:
     Type: "AWS::IAM::Role"
@@ -205,7 +206,7 @@ Outputs:
     Value: !Sub "https://${RestApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${apiGatewayStageName}"
 
   avgTempLambdaArn:
-    Value: !GetAtt "avgTempLambdaFn.Arn"
+    Value: !GetAtt "AvgTempLambdaFn.Arn"
 
   currentTempLambdaArn:
     Value: !GetAtt "currentTempLambdaFn.Arn"
