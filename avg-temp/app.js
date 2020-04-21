@@ -9,6 +9,7 @@ const MONGODB_URI = "mongodb+srv://" +
     process.env.MONGODB_URI +
     "/vopak?retryWrites=true&w=majority"
 const moment = require('moment');
+const q = {'city': 'Sfax', 'country': 'Tunisia'}
 
 let cachedDb;
 let response;
@@ -64,6 +65,29 @@ function getAverageWeather(client, q) {
         });
 }
 
+exports.generateOutput = (result, callback) => {
+    if (!result) {
+        response = {
+            statusCode: 404,
+            body: JSON.stringify(({
+                message: 'Could not find weather items',
+                q: q,
+                current_dt: moment().format(),
+            }))
+        }
+        callback(null, response)
+    } else {
+        response = {
+            statusCode: 200,
+            body: JSON.stringify({
+                avg_temperature: result.averageTemp,
+                current_dt: moment().format(),
+            }),
+        };
+        callback(null, response);
+    }
+}
+
 /**
  * Lambda handler.
  *
@@ -73,30 +97,10 @@ function getAverageWeather(client, q) {
  */
 exports.lambdaHandler = (event, context, callback) => {
     context.callbackWaitsForEmptyEventLoop = false;
-    const q = {'city': 'Sfax', 'country': 'Tunisia'}
+    console.log(MONGODB_URI)
     connectToDatabase(MONGODB_URI)
         .then(db => getAverageWeather(db, q))
-        .then(result => {
-            if (!result) {
-                response = {
-                    statusCode: 404,
-                    body: JSON.stringify(({
-                        message: 'Could not find weather items',
-                        q: q,
-                        current_dt: moment().format(),
-                    }))
-                }
-                return callback(null, response)
-            }
-            response = {
-                statusCode: 200,
-                body: JSON.stringify({
-                    avg_temperature: result.averageTemp,
-                    current_dt: moment().format(),
-                }),
-            };
-            callback(null, response);
-        })
+        .then(result => exports.generateOutput(result, callback))
         .catch(err => {
             console.log('=> an error occurred: ', err);
             callback(err);

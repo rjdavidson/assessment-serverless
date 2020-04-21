@@ -8,6 +8,7 @@ const MONGODB_URI = "mongodb+srv://" +
     "@" +
     process.env.MONGODB_URI +
     "/vopak?retryWrites=true&w=majority"
+const q = {'city': 'Covilha', 'country': 'Portugal'}
 const moment = require('moment');
 
 let cachedDb;
@@ -60,6 +61,28 @@ function getMostRecentWeatherItem(client, q) {
     });
 }
 
+exports.generateOutput = (result, callback) => {
+    if (!result) {
+        response = {
+            statusCode: 404,
+            body: JSON.stringify(({
+                message: 'Could not find weather items',
+                q: q,
+                current_dt: moment().format(),
+            }))
+        }
+        return callback(null, response)
+    }
+    response = {
+        statusCode: 200,
+        body: JSON.stringify({
+            temperature: result.temperature,
+            current_dt: moment().format(),
+        }),
+    };
+    callback(null, response)
+}
+
 /**
  * Lambda handler.
  *
@@ -69,31 +92,9 @@ function getMostRecentWeatherItem(client, q) {
  */
 exports.lambdaHandler = (event, context, callback) => {
     context.callbackWaitsForEmptyEventLoop = false;
-
-    const q = {'city': 'Covilha', 'country': 'Portugal'}
     connectToDatabase(MONGODB_URI)
     .then(db => getMostRecentWeatherItem(db, q))
-    .then(result => {
-        if (! result) {
-            response = {
-                statusCode: 404,
-                body: JSON.stringify(({
-                    message: 'Could not find weather items',
-                    q: q,
-                    current_dt: moment().format(),
-                }))
-            }
-            return callback(null, response)
-        }
-        response = {
-            statusCode: 200,
-            body: JSON.stringify({
-                temperature: result.temperature,
-                current_dt: moment().format(),
-            }),
-        };
-        callback(null, response);
-    })
+    .then(result => exports.generateOutput(result, callback))
     .catch(err => {
       console.log('=> an error occurred: ', err);
       callback(err);
