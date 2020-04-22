@@ -3,7 +3,6 @@
 const app = require('../../avg-temp/app.js');
 const chai = require('chai');
 const expect = chai.expect;
-var event, context, callback;
 
 describe('Tests index', function () {
     it('verifies successful 404 response', async () => {
