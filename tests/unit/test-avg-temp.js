@@ -1,6 +1,6 @@
 'use strict';
 
-const app = require('../../app.js');
+const app = require('../../avg-temp/app.js');
 const chai = require('chai');
 const expect = chai.expect;
 var event, context, callback;
@@ -18,13 +18,13 @@ describe('Tests index', function () {
     });
 
     it('verifies successful response', async () => {
-        app.generateOutput({'temperature': 14.5}, function(error, result) {
+        app.generateOutput({'averageTemp': 20.2}, function(error, result) {
             expect(result).to.be.an('object');
             expect(result.statusCode).to.equal(200)
             expect(result.body).to.be.an('string');
 
             let response = JSON.parse(result.body)
-            expect(response['temperature']).to.equal(14.5)
+            expect(response['avg_temperature']).to.equal(20.2)
         });
     });
 });

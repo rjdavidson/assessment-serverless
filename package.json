@@ -1,9 +1,9 @@
 {
   "name": "vopak-assessment",
   "version": "1.0.0",
-  "description": "Here you find the AWS Lambda functions for the assessment",
+  "description": "AWS Lambda + API Gateway assessment",
   "scripts": {
-    "test": "mocha avg-temp/tests/unit/ && mocha current-temp/tests/unit/"
+    "test": "mocha tests/unit/"
   },
   "author": "Richard Davidson",
   "license": "MIT",
