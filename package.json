@@ -8,9 +8,9 @@
   "author": "Richard Davidson",
   "license": "MIT",
   "devDependencies": {
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.1",
     "dotenv": "^8.2.0",
-    "express": "^4.17.1",
+    "express": "^4.18.2",
     "chai": "^4.2.0",
     "mocha": "^10.1.0"
   }
